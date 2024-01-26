@@ -1,0 +1,10 @@
+# adds additional scrape configs to prometheus.yml
+# must be a string so you have to add a | after extraScrapeConfigs:
+# example adds prometheus-blackbox-exporter scrape config
+extraScrapeConfigs: |
+  - job_name: 'kong'
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 15s
+    static_configs:
+      - targets: ["kong-monitoring.kong-dp.svc.cluster.local:8100"]

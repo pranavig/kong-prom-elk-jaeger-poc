@@ -1,0 +1,73 @@
+image:
+  repository: kong/kong-gateway
+  tag: "3.4.1.1"
+
+secretVolumes:
+  - kong-cluster-cert
+  - kong-ca-cert
+  - kong-cluster-cert-two
+
+env:
+  role: data_plane
+  database: "off"
+  audit_log: "on"
+  headers: "off"
+  anonymous_reports: "off"
+  untrusted_lua: "off"
+  status_listen: 0.0.0.0:8100
+  cluster_control_plane: kong-cp-kong-cluster.kong-cp.svc.cluster.local:8005
+  cluster_telemetry_endpoint: kong-cp-kong-clustertelemetry.kong-cp.svc.cluster.local:8006
+  cluster_mtls: pki
+  cluster_server_name: kong-cp-kong-cluster.kong-cp.svc.cluster.local
+  cluster_telemetry_server_name: kong-cp-kong-clustertelemetry.kong-cp.svc.cluster.local
+  lua_ssl_verify_depth: 2
+  tracing_instrumentations: all
+  cluster_ca_cert: /etc/secrets/kong-ca-cert/ca.crt
+  lua_ssl_trusted_certificate: /etc/secrets/kong-cluster-cert-two/tls.crt
+  cluster_cert: /etc/secrets/kong-cluster-cert-two/tls.crt
+  cluster_cert_key: /etc/secrets/kong-cluster-cert-two/tls.key
+  ssl_cert: /etc/secrets/kong-cluster-cert/tls.crt
+  ssl_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+
+ingressController:
+  enabled: false
+enterprise:
+  enabled: true
+  license_secret: kong-enterprise-license
+  vitals:
+    enabled: false
+  portal:
+    enabled: false
+  rbac:
+    enabled: false
+
+admin:
+  enabled: false
+
+manager:
+  enabled: false
+
+portal:
+  enabled: false
+
+portalapi:
+  enabled: false
+
+proxy:
+  enabled: true
+  type: LoadBalancer
+  annotations: { konghq.com/protocol: "https" }
+  http:
+    enabled: true
+    servicePort: 80
+    containerPort: 8000
+    parameters: []
+  tls:
+    enabled: true
+    servicePort: 443
+    containerPort: 8443
+    parameters:
+      - http2
+  stream: {}
+  ingress:
+    enabled: true

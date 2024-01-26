@@ -1,0 +1,111 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: filebeat-clusterrole
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources:
+  - namespaces
+  - pods
+  verbs:
+  - get
+  - watch
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: filebeat-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: filebeat-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: default # name of the service account
+  namespace: elk-wip # namespace of the service account
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: elk-wip
+data:
+  filebeat.yml: |
+    filebeat.autodiscover:
+      providers:
+        - type: kubernetes
+          node: ${NODE_NAME}
+          hints.enabled: true
+          hints.default_config:
+            type: container
+            paths:
+              - /var/log/containers/*.log
+          include_labels:
+            - 'kubernetes.namespace'
+            - 'kubernetes.container.name'
+          templates:
+            - config:
+                - type: container
+                  paths:
+                    - /var/log/containers/*.log
+    filebeat.config:
+      modules:
+        path: ${path.config}/modules.d/*.yml
+        # Reload module configs as they change:
+        reload.enabled: false
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/*.log
+    output.logstash:
+      hosts: ["logstash:5044"]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: elk-wip
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      containers:
+      - name: filebeat
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          runAsUser: 0
+        image: docker.elastic.co/beats/filebeat:7.10.0
+        volumeMounts:
+        - name: log
+          mountPath: /var/log
+        - name: config-volume
+          mountPath: /usr/share/filebeat/filebeat.yml
+          subPath: filebeat.yml
+        - name: container-logs
+          mountPath: /var/log/containers/
+        - name: pod-logs
+          mountPath: /var/log/pods/
+      volumes:
+      - name: log
+        hostPath:
+          path: /var/log
+      - name: config-volume
+        configMap:
+          name: filebeat-config
+      - name: container-logs
+        hostPath:
+          path: /var/log/containers/
+      - name: pod-logs
+        hostPath:
+          path: /var/log/pods/

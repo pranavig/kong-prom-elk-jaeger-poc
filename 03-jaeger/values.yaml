@@ -1,0 +1,25 @@
+provisionDataStore:
+  cassandra: false
+  elasticsearch: false
+
+allInOne:
+  enabled: true
+  service:
+    headless: false
+  ingress:
+    enabled: true
+    ingressClassName: kong
+    annotations:
+      konghq.com/https-redirect-status-code: "301"
+      konghq.com/strip-path: "false"
+    hosts:
+    - "jaeger.k8s.orb.local"
+
+storage:
+  type: none
+agent:
+  enabled: false
+collector:
+  enabled: false
+query:
+  enabled: false
